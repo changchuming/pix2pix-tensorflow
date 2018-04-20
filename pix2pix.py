@@ -553,14 +553,14 @@ def main():
         with open(os.path.join(a.checkpoint, "options.json")) as f:
             for key, val in json.loads(f.read()).items():
                 if key in options:
-                    print("loaded", key, "=", val)
+                    print("loaded", key, "=", val, file=open("output.txt", "a"))
                     setattr(a, key, val)
         # disable these features in test mode
         a.scale_size = CROP_SIZE
         a.flip = False
 
     for k, v in a._get_kwargs():
-        print(k, "=", v)
+        print(k, "=", v, file=open("output.txt", "a"))
 
     with open(os.path.join(a.output_dir, "options.json"), "w") as f:
         f.write(json.dumps(vars(a), sort_keys=True, indent=4))
@@ -613,17 +613,17 @@ def main():
 
         with tf.Session() as sess:
             sess.run(init_op)
-            print("loading model from checkpoint")
+            print("loading model from checkpoint", file=open("output.txt", "a"))
             checkpoint = tf.train.latest_checkpoint(a.checkpoint)
             restore_saver.restore(sess, checkpoint)
-            print("exporting model")
+            print("exporting model", file=open("output.txt", "a"))
             export_saver.export_meta_graph(filename=os.path.join(a.output_dir, "export.meta"))
             export_saver.save(sess, os.path.join(a.output_dir, "export"), write_meta_graph=False)
 
         return
 
     examples = load_examples()
-    print("examples count = %d" % examples.count)
+    print("examples count = %d" % examples.count, file=open("output.txt", "a"))
 
     # inputs and targets are [batch_size, height, width, channels]
     model = create_model(examples.inputs, examples.targets)
@@ -710,10 +710,10 @@ def main():
     logdir = a.output_dir if (a.trace_freq > 0 or a.summary_freq > 0) else None
     sv = tf.train.Supervisor(logdir=logdir, save_summaries_secs=0, saver=None)
     with sv.managed_session() as sess:
-        print("parameter_count =", sess.run(parameter_count))
+        print("parameter_count =", sess.run(parameter_count), file=open("output.txt", "a"))
 
         if a.checkpoint is not None:
-            print("loading model from checkpoint")
+            print("loading model from checkpoint", file=open("output.txt", "a"))
             checkpoint = tf.train.latest_checkpoint(a.checkpoint)
             saver.restore(sess, checkpoint)
 
@@ -732,10 +732,10 @@ def main():
                 results = sess.run(display_fetches)
                 filesets = save_images(results)
                 for i, f in enumerate(filesets):
-                    print("evaluated image", f["name"])
+                    print("evaluated image", f["name"], file=open("output.txt", "a"))
                 index_path = append_index(filesets)
-            print("wrote index at", index_path)
-            print("rate", (time.time() - start) / max_steps)
+            print("wrote index at", index_path, file=open("output.txt", "a"))
+            print("rate", (time.time() - start) / max_steps, file=open("output.txt", "a"))
         else:
             # training
             start = time.time()
@@ -769,16 +769,16 @@ def main():
                 results = sess.run(fetches, options=options, run_metadata=run_metadata)
 
                 if should(a.summary_freq):
-                    print("recording summary")
+                    print("recording summary", file=open("output.txt", "a"))
                     sv.summary_writer.add_summary(results["summary"], results["global_step"])
 
                 if should(a.display_freq):
-                    print("saving display images")
+                    print("saving display images", file=open("output.txt", "a"))
                     filesets = save_images(results["display"], step=results["global_step"])
                     append_index(filesets, step=True)
 
                 if should(a.trace_freq):
-                    print("recording trace")
+                    print("recording trace", file=open("output.txt", "a"))
                     sv.summary_writer.add_run_metadata(run_metadata, "step_%d" % results["global_step"])
 
                 if should(a.progress_freq):
@@ -787,17 +787,19 @@ def main():
                     train_step = (results["global_step"] - 1) % examples.steps_per_epoch + 1
                     rate = (step + 1) * a.batch_size / (time.time() - start)
                     remaining = (max_steps - step) * a.batch_size / rate
-                    print("progress  epoch %d  step %d  image/sec %0.1f  remaining %dm" % (train_epoch, train_step, rate, remaining / 60))
-                    print("discrim_loss", results["discrim_loss"])
-                    print("gen_loss_GAN", results["gen_loss_GAN"])
-                    print("gen_loss_L1", results["gen_loss_L1"])
+                    print("progress  epoch %d  step %d  image/sec %0.1f  remaining %dm" % (train_epoch, train_step, rate, remaining / 60), file=open("output.txt", "a"))
+                    print("discrim_loss", results["discrim_loss"], file=open("output.txt", "a"))
+                    print("gen_loss_GAN", results["gen_loss_GAN"], file=open("output.txt", "a"))
+                    print("gen_loss_L1", results["gen_loss_L1"], file=open("output.txt", "a"))
 
                 if should(a.save_freq):
-                    print("saving model")
+                    print("saving model", file=open("output.txt", "a"))
                     saver.save(sess, os.path.join(a.output_dir, "model"), global_step=sv.global_step)
 
                 if sv.should_stop():
                     break
+            print("End time taken:", file=open("output.txt", "a"))
+            print(time.time()-start, file=open("output.txt", "a"))
 
 
 main()
